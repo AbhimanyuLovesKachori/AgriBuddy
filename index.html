@@ -1,135 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>AgriBuddy AR | Wheat Row Planner</title>
+  <title>AgriBuddy AR | Final Build</title>
 
   <script src="https://cdn.8thwall.org/web/aframe/8frame-1.4.1.min.js"></script>
   <script src="https://cdn.8thwall.org/web/xrextras/xrextras.js"></script>
   <script src="https://cdn.8thwall.org/web/xr-engine/xr-engine.js"></script>
 
   <style>
-    body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
+    body { margin: 0; background-color: #000; color: #39FF14; font-family: monospace; overflow: hidden; }
     
-    /* Splash Screen to solve the black screen/permission issue */
     #overlay {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #000;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      z-index: 2000;
-      color: #39FF14;
-      text-align: center;
-      padding: 20px;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: #000; z-index: 2000; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center;
+    }
+
+    .neon-panel {
+      pointer-events: auto; background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #39FF14; padding: 15px; border-radius: 12px;
+      width: 260px; box-shadow: 0 0 20px #39FF14;
     }
 
     #agribuddy-dashboard {
-      position: absolute;
-      top: 20px; left: 20px;
-      z-index: 1001;
-      pointer-events: none;
-      display: none; /* Shown after AR starts */
-    }
-
-    .neon-card {
-      pointer-events: auto;
-      background: rgba(0, 0, 0, 0.9);
-      border: 2px solid #39FF14;
-      padding: 15px;
-      border-radius: 12px;
-      width: 260px;
-      box-shadow: 0 0 20px #39FF14;
-      color: #39FF14;
+      position: absolute; top: 20px; left: 20px; z-index: 1001;
+      pointer-events: none; display: none;
     }
 
     .btn {
-      background: #39FF14;
-      color: #000;
-      border: none;
-      padding: 15px 30px;
-      font-weight: bold;
-      font-size: 1.2em;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 0 15px #39FF14;
-      margin-top: 20px;
+      background: #39FF14; color: #000; border: none; padding: 15px 30px;
+      font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px;
     }
-    
-    #status-msg { margin-top: 10px; font-size: 0.9em; line-height: 1.4; }
   </style>
 
   <script>
-    // Initialize the Row Planning Component
-    AFRAME.registerComponent('agribuddy-row', {
+    AFRAME.registerComponent('agribuddy-logic', {
       init: function() {
         this.plants = [];
         this.lastPos = null;
 
         this.el.addEventListener('click', (e) => {
           if (this.plants.length >= 10) return;
-
           const point = e.detail.intersection.point;
 
-          // Place the Wheat model
           const wheat = document.createElement('a-entity');
           wheat.setAttribute('gltf-model', '#wheatModel');
           wheat.setAttribute('position', point);
-          wheat.setAttribute('scale', '0.5 0.5 0.5'); // Adjust scale if wheat is too big/small
+          wheat.setAttribute('scale', '0.3 0.3 0.3');
           this.el.sceneEl.appendChild(wheat);
 
           this.plants.push(point);
-          let displayTxt = `Plant ${this.plants.length}/10 placed.`;
-
+          let txt = `Plant ${this.plants.length}/10`;
           if (this.lastPos) {
-            // Euclidean Distance for precision planting
-            const d = Math.sqrt(
-              Math.pow(point.x - this.lastPos.x, 2) + 
-              Math.pow(point.z - this.lastPos.z, 2)
-            );
-            displayTxt += `<br>Spacing: ${d.toFixed(2)}m`;
-            
-            // Connecting visualizer
-            const connector = document.createElement('a-entity');
-            connector.setAttribute('line', {
-              start: this.lastPos, 
-              end: point, 
-              color: '#39FF14',
-              opacity: 0.5
-            });
-            this.el.sceneEl.appendChild(connector);
+            const d = Math.sqrt(Math.pow(point.x - this.lastPos.x, 2) + Math.pow(point.z - this.lastPos.z, 2));
+            txt += ` | Gap: ${d.toFixed(2)}m`;
           }
-
-          document.getElementById('status-msg').innerHTML = displayTxt;
+          document.getElementById('status').innerHTML = txt;
           this.lastPos = point;
         });
       }
     });
 
-    // Handle the Start button
-    function startAgriBuddy() {
+    function startSystem() {
       document.getElementById('overlay').style.display = 'none';
       document.getElementById('agribuddy-dashboard').style.display = 'block';
-      // Signal to A-Frame to start the engine
-      const scene = document.querySelector('a-scene');
-      scene.play();
     }
   </script>
 </head>
 
 <body>
   <div id="overlay">
-    <h1 style="letter-spacing: 4px;">AGRIBUDDY</h1>
-    <p>Augmented Reality Agricultural Row Planner</p>
-    <button class="btn" onclick="startAgriBuddy()">START AR SYSTEM</button>
-    <p style="font-size: 0.7em; color: #888; margin-top: 15px;">Requires Camera & Motion Permissions</p>
+    <h2 style="letter-spacing: 3px;">AGRIBUDDY SYSTEM</h2>
+    <p style="font-size: 0.8em;">Agricultural Row Planner v1.0</p>
+    <button class="btn" onclick="startSystem()">INITIALIZE AR</button>
   </div>
 
   <div id="agribuddy-dashboard">
-    <div class="neon-card">
-      <div style="font-weight: bold; border-bottom: 1px solid #39FF14; padding-bottom: 5px;">FIELD ANALYSIS</div>
-      <div id="status-msg">Move phone to scan ground...<br>Then tap to plant first wheat stalk.</div>
-      <button onclick="location.reload()" style="background:none; border:1px solid #39FF14; color:#39FF14; padding:5px; margin-top:10px; width:100%; border-radius:4px; font-size:0.7em;">RESET SESSION</button>
+    <div class="neon-panel">
+      <div style="font-weight: bold; font-size: 1.1em;">FIELD ANALYSIS</div>
+      <div id="status" style="margin-top: 8px;">Scanning ground...</div>
+      <button onclick="location.reload()" style="background:none; border:1px solid #39FF14; color:#39FF14; margin-top:10px; width:100%; border-radius:4px; font-size: 0.7em;">RE-CALIBRATE</button>
     </div>
   </div>
 
@@ -137,32 +89,17 @@
     xr-engine="allowedDevices: any; dataPreloadChunks: slam"
     xrextras-loading
     xrextras-runtime-error
-    renderer="colorManagement: true"
-    embedded
-    style="display: block;">
+    renderer="colorManagement: true">
 
     <a-assets>
       <a-asset-item id="wheatModel" src="Wheat.glb"></a-asset-item>
     </a-assets>
 
-    <a-camera
-      id="camera"
-      position="0 8 0"
-      raycaster="objects: .ground"
-      cursor="fuse: false; rayOrigin: mouse;">
-    </a-camera>
+    <a-camera id="camera" position="0 8 0" raycaster="objects: .ground" cursor="fuse: false; rayOrigin: mouse;"></a-camera>
 
-    <a-entity
-      class="ground"
-      geometry="primitive: plane; width: 1000; height: 1000"
-      rotation="-90 0 0"
-      material="transparent: true; opacity: 0"
-      agribuddy-row>
-    </a-entity>
+    <a-entity class="ground" geometry="primitive: plane; width: 1000; height: 1000" rotation="-90 0 0" material="transparent: true; opacity: 0" agribuddy-logic></a-entity>
 
     <a-light type="ambient" intensity="0.8"></a-light>
-    <a-light type="directional" position="1 4 2" intensity="0.5"></a-light>
-
   </a-scene>
 </body>
 </html>
