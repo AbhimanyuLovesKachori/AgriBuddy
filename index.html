@@ -3,126 +3,147 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>AgriBuddy AR | Row Planner</title>
+  <title>AgriBuddy AR | Wheat Row Planner</title>
 
-  <script src="https://cdn.8thwall.org/web/aframe/8frame-latest.min.js"></script>
+  <script src="https://cdn.8thwall.org/web/aframe/8frame-1.4.1.min.js"></script>
   <script src="https://cdn.8thwall.org/web/xrextras/xrextras.js"></script>
   <script src="https://cdn.8thwall.org/web/xr-engine/xr-engine.js"></script>
 
   <style>
-    /* AGRIBUDDY CSS: High-contrast Neon UI for outdoor use */
-    body { margin: 0; overflow: hidden; background-color: black; }
-
-    #agribuddy-ui {
+    body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
+    
+    /* Splash Screen to solve the black screen/permission issue */
+    #overlay {
       position: absolute;
-      top: 30px;
-      left: 20px;
-      z-index: 1000;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #000;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 2000;
+      color: #39FF14;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #agribuddy-dashboard {
+      position: absolute;
+      top: 20px; left: 20px;
+      z-index: 1001;
       pointer-events: none;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: none; /* Shown after AR starts */
     }
 
     .neon-card {
       pointer-events: auto;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.9);
       border: 2px solid #39FF14;
-      box-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
-      color: #39FF14;
       padding: 15px;
       border-radius: 12px;
-      width: 250px;
+      width: 260px;
+      box-shadow: 0 0 20px #39FF14;
+      color: #39FF14;
     }
 
-    #status-title { font-weight: bold; font-size: 1.1em; letter-spacing: 1px; margin-bottom: 8px; }
-    #stats { font-size: 0.9em; line-height: 1.4em; color: #ffffff; }
-    .gap-val { color: #39FF14; font-weight: bold; }
-
-    .reset-btn {
-      margin-top: 12px;
-      width: 100%;
+    .btn {
       background: #39FF14;
-      color: black;
+      color: #000;
       border: none;
-      padding: 8px;
+      padding: 15px 30px;
       font-weight: bold;
-      border-radius: 6px;
+      font-size: 1.2em;
+      border-radius: 8px;
       cursor: pointer;
-      text-transform: uppercase;
+      box-shadow: 0 0 15px #39FF14;
+      margin-top: 20px;
     }
+    
+    #status-msg { margin-top: 10px; font-size: 0.9em; line-height: 1.4; }
   </style>
 
   <script>
-    // AGRIBUDDY JS: Component for Row Planning (10 Plants)
-    AFRAME.registerComponent('agribuddy-row-logic', {
+    // Initialize the Row Planning Component
+    AFRAME.registerComponent('agribuddy-row', {
       init: function() {
         this.plants = [];
-        this.maxPlants = 10;
         this.lastPos = null;
 
-        // Listen for taps on the ground entity
-        this.el.addEventListener('click', (event) => {
-          if (this.plants.length >= this.maxPlants) return;
+        this.el.addEventListener('click', (e) => {
+          if (this.plants.length >= 10) return;
 
-          const currentPos = event.detail.intersection.point;
+          const point = e.detail.intersection.point;
 
-          // 1. Create and place a visual plant marker (Neon Cone)
-          const plantMarker = document.createElement('a-entity');
-          plantMarker.setAttribute('geometry', 'primitive: cone; radiusBottom: 0.06; height: 0.2');
-          plantMarker.setAttribute('material', 'color: #39FF14; emissive: #39FF14; emissiveIntensity: 0.5');
-          plantMarker.setAttribute('position', currentPos);
-          this.el.sceneEl.appendChild(plantMarker);
+          // Place the Wheat model
+          const wheat = document.createElement('a-entity');
+          wheat.setAttribute('gltf-model', '#wheatModel');
+          wheat.setAttribute('position', point);
+          wheat.setAttribute('scale', '0.5 0.5 0.5'); // Adjust scale if wheat is too big/small
+          this.el.sceneEl.appendChild(wheat);
 
-          this.plants.push(currentPos);
+          this.plants.push(point);
+          let displayTxt = `Plant ${this.plants.length}/10 placed.`;
 
-          // 2. Update UI and Draw Distance Lines
-          let statsHtml = `Plant ${this.plants.length}/10 placed.`;
-          
           if (this.lastPos) {
-            // Distance formula: sqrt((x2-x1)^2 + (z2-z1)^2)
+            // Euclidean Distance for precision planting
             const d = Math.sqrt(
-              Math.pow(currentPos.x - this.lastPos.x, 2) +
-              Math.pow(currentPos.z - this.lastPos.z, 2)
+              Math.pow(point.x - this.lastPos.x, 2) + 
+              Math.pow(point.z - this.lastPos.z, 2)
             );
+            displayTxt += `<br>Spacing: ${d.toFixed(2)}m`;
             
-            statsHtml += `<br>Current Gap: <span class="gap-val">${d.toFixed(2)}m</span>`;
-
-            // Draw a line connecting this plant to the previous one
+            // Connecting visualizer
             const connector = document.createElement('a-entity');
             connector.setAttribute('line', {
-              start: this.lastPos,
-              end: currentPos,
+              start: this.lastPos, 
+              end: point, 
               color: '#39FF14',
-              opacity: 0.6
+              opacity: 0.5
             });
             this.el.sceneEl.appendChild(connector);
           }
 
-          document.getElementById('stats').innerHTML = statsHtml;
-          this.lastPos = currentPos;
-
-          if (this.plants.length === this.maxPlants) {
-            document.getElementById('status-title').innerText = "ROW COMPLETE";
-          }
+          document.getElementById('status-msg').innerHTML = displayTxt;
+          this.lastPos = point;
         });
       }
     });
+
+    // Handle the Start button
+    function startAgriBuddy() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('agribuddy-dashboard').style.display = 'block';
+      // Signal to A-Frame to start the engine
+      const scene = document.querySelector('a-scene');
+      scene.play();
+    }
   </script>
 </head>
 
 <body>
-  <div id="agribuddy-ui">
+  <div id="overlay">
+    <h1 style="letter-spacing: 4px;">AGRIBUDDY</h1>
+    <p>Augmented Reality Agricultural Row Planner</p>
+    <button class="btn" onclick="startAgriBuddy()">START AR SYSTEM</button>
+    <p style="font-size: 0.7em; color: #888; margin-top: 15px;">Requires Camera & Motion Permissions</p>
+  </div>
+
+  <div id="agribuddy-dashboard">
     <div class="neon-card">
-      <div id="status-title">AGRIBUDDY ROW PLANNER</div>
-      <div id="stats">Scan ground...<br>Tap to place first plant</div>
-      <button class="reset-btn" onclick="location.reload()">Reset Row</button>
+      <div style="font-weight: bold; border-bottom: 1px solid #39FF14; padding-bottom: 5px;">FIELD ANALYSIS</div>
+      <div id="status-msg">Move phone to scan ground...<br>Then tap to plant first wheat stalk.</div>
+      <button onclick="location.reload()" style="background:none; border:1px solid #39FF14; color:#39FF14; padding:5px; margin-top:10px; width:100%; border-radius:4px; font-size:0.7em;">RESET SESSION</button>
     </div>
   </div>
 
   <a-scene
-    xr-engine
+    xr-engine="allowedDevices: any; dataPreloadChunks: slam"
     xrextras-loading
     xrextras-runtime-error
-    renderer="colorManagement: true">
+    renderer="colorManagement: true"
+    embedded
+    style="display: block;">
+
+    <a-assets>
+      <a-asset-item id="wheatModel" src="Wheat.glb"></a-asset-item>
+    </a-assets>
 
     <a-camera
       id="camera"
@@ -136,7 +157,7 @@
       geometry="primitive: plane; width: 1000; height: 1000"
       rotation="-90 0 0"
       material="transparent: true; opacity: 0"
-      agribuddy-row-logic>
+      agribuddy-row>
     </a-entity>
 
     <a-light type="ambient" intensity="0.8"></a-light>
