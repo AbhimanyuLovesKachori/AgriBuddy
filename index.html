@@ -1,116 +1,118 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>AgriBuddy: Row Planner (OSS)</title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AgriBuddy AR | Final Proto</title>
 
-  <script src="https://cdn.8thwall.org/web/aframe/8frame-latest.min.js"></script>
-<script src="https://cdn.8thwall.org/web/xrextras/xrextras.js"></script>
-<script src="https://cdn.8thwall.org/web/xr-engine/xr-engine.js"></script>
-
-<a-scene xr-engine agribuddy-row ...>
+    <script src="https://cdn.8thwall.org/web/aframe/8frame-latest.min.js"></script>
+    <script src="https://cdn.8thwall.org/web/xrextras/xrextras.js"></script>
+    <script src="https://cdn.8thwall.org/web/xr-engine/xr-engine.js"></script>
 
     <style>
-      #agribuddy-ui {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        z-index: 100;
-        pointer-events: none;
-        font-family: sans-serif;
-      }
-      .neon-box {
-        pointer-events: auto;
-        background: rgba(0, 0, 0, 0.85);
-        border: 2px solid #39FF14;
-        box-shadow: 0 0 15px #39FF14;
-        color: #39FF14;
-        padding: 15px;
-        border-radius: 10px;
-        width: 250px;
-      }
+        #agribuddy-ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            pointer-events: none;
+            font-family: sans-serif;
+        }
+        .neon-box {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #39FF14;
+            box-shadow: 0 0 15px #39FF14;
+            color: #39FF14;
+            padding: 15px;
+            border-radius: 12px;
+            width: 240px;
+        }
+        button {
+            width: 100%;
+            margin-top: 10px;
+            background: #39FF14;
+            border: none;
+            padding: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 
     <script>
-      AFRAME.registerComponent('agribuddy-row', {
-        init: function() {
-          this.plantCount = 0;
-          this.maxPlants = 10;
-          this.lastPos = null;
+        // AgriBuddy Row Logic (10 Plants)
+        AFRAME.registerComponent('agribuddy-row', {
+            init: function() {
+                this.plantCount = 0;
+                this.lastPos = null;
+                
+                // Add a listener to wait for the scene to load
+                this.el.sceneEl.addEventListener('connected', () => {
+                    console.log("AgriBuddy: AR Engine Connected");
+                });
 
-          this.el.addEventListener('click', (event) => {
-            if (this.plantCount >= this.maxPlants) return;
+                this.el.addEventListener('click', (event) => {
+                    if (this.plantCount >= 10) return;
 
-            const currentPos = event.detail.intersection.point;
+                    const currentPos = event.detail.intersection.point;
 
-            // 1. Place a Marker (Green Cone)
-            const plant = document.createElement('a-entity');
-            plant.setAttribute('geometry', 'primitive: cone; radiusBottom: 0.05; height: 0.2');
-            plant.setAttribute('material', 'color: #39FF14');
-            plant.setAttribute('position', currentPos);
-            this.el.sceneEl.appendChild(plant);
+                    // Place a Plant (Green Cone)
+                    const plant = document.createElement('a-entity');
+                    plant.setAttribute('geometry', 'primitive: cone; radiusBottom: 0.05; height: 0.2');
+                    plant.setAttribute('material', 'color: #39FF14');
+                    plant.setAttribute('position', currentPos);
+                    this.el.sceneEl.appendChild(plant);
 
-            this.plantCount++;
+                    this.plantCount++;
 
-            // 2. Calculate Distance
-            let message = `Plant ${this.plantCount}/10 placed.`;
-            if (this.lastPos) {
-              const d = Math.sqrt(
-                Math.pow(currentPos.x - this.lastPos.x, 2) +
-                Math.pow(currentPos.z - this.lastPos.z, 2)
-              );
-              message += `<br>Gap: ${d.toFixed(2)}m`;
-              
-              // Draw Visual Line
-              const line = document.createElement('a-entity');
-              line.setAttribute('line', {
-                start: this.lastPos,
-                end: currentPos,
-                color: '#39FF14'
-              });
-              this.el.sceneEl.appendChild(line);
+                    let msg = `Plant ${this.plantCount}/10 placed.`;
+                    if (this.lastPos) {
+                        const d = Math.sqrt(
+                            Math.pow(currentPos.x - this.lastPos.x, 2) +
+                            Math.pow(currentPos.z - this.lastPos.z, 2)
+                        );
+                        msg += `<br>Gap: ${d.toFixed(2)}m`;
+                    }
+                    document.getElementById('status-text').innerHTML = msg;
+                    this.lastPos = currentPos;
+                });
             }
-
-            document.getElementById('status-text').innerHTML = message;
-            this.lastPos = currentPos;
-          });
-        }
-      });
+        });
     </script>
-  </head>
+</head>
 
-  <body>
+<body>
     <div id="agribuddy-ui">
-      <div class="neon-box">
-        <h3 style="margin:0 0 5px 0;">AGRIBUDDY</h3>
-        <div id="status-text">Tap ground to plan row...</div>
-        <button onclick="location.reload()" style="width:100%; margin-top:10px; cursor:pointer;">RESET</button>
-      </div>
+        <div class="neon-box">
+            <h3 style="margin:0;">AGRIBUDDY</h3>
+            <div id="status-text">Scanning ground...<br>Tap to start row</div>
+            <button onclick="location.reload()">RESET ROW</button>
+        </div>
     </div>
 
     <a-scene
-      agribuddy-row
-      xr-engine
-      xrextras-loading
-      xrextras-runtime-error>
+        xr-engine
+        agribuddy-row
+        xrextras-loading
+        xrextras-runtime-error
+        renderer="colorManagement: true">
 
-      <a-camera
-        id="camera"
-        position="0 8 0"
-        raycaster="objects: .ground"
-        cursor="fuse: false; rayOrigin: mouse;">
-      </a-camera>
+        <a-camera
+            id="camera"
+            position="0 8 0"
+            raycaster="objects: .ground"
+            cursor="fuse: false; rayOrigin: mouse;">
+        </a-camera>
 
-      <a-light type="ambient" intensity="0.7"></a-light>
+        <a-entity 
+            class="ground"
+            geometry="primitive: plane; width: 1000; height: 1000"
+            rotation="-90 0 0"
+            material="transparent: true; opacity: 0">
+        </a-entity>
 
-      <a-box
-        id="ground"
-        class="ground"
-        scale="1000 2 1000"
-        position="0 -1 0"
-        material="transparent: true; opacity: 0"
-        shadow>
-      </a-box>
+        <a-light type="ambient" intensity="0.8"></a-light>
     </a-scene>
-  </body>
+</body>
 </html>
