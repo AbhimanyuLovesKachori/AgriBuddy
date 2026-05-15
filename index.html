@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AgriBuddy: Row Planner</title>
+
+    <script src="../../../dist/8frame-1.3.0.min.js"></script>
+    <script src="../../../dist/xrextras.js"></script>
+    <script src="../../../dist/landing-page.js"></script>
+
+   <script src="../../../dist/xrweb.js"></script>
+
+    <style>
+      /* AgriBuddy Neon Dashboard */
+      #agribuddy-ui {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 100;
+        pointer-events: none;
+        font-family: 'Courier New', Courier, monospace;
+      }
+      .neon-box {
+        pointer-events: auto;
+        background: rgba(0, 0, 0, 0.85);
+        border: 2px solid #39FF14;
+        box-shadow: 0 0 15px #39FF14;
+        color: #39FF14;
+        padding: 15px;
+        border-radius: 10px;
+        width: 260px;
+      }
+      .btn-reset {
+        margin-top: 10px;
+        background: #39FF14;
+        color: black;
+        border: none;
+        padding: 8px;
+        width: 100%;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    </style>
+
+    <script>
+      // AGRIBUDDY ROW LOGIC
+      AFRAME.registerComponent('agribuddy-row', {
+        init: function() {
+          this.plantCount = 0
+          this.maxPlants = 10
+          this.lastPos = null
+
+          this.el.addEventListener('click', (event) => {
+            if (this.plantCount >= this.maxPlants) return
+
+            // 1. Get tap position from raycaster
+            const currentPos = event.detail.intersection.point
+
+            // 2. Spawn the plant (using your treeModel)
+            const newPlant = document.createElement('a-entity')
+            newPlant.setAttribute('gltf-model', '#treeModel')
+            newPlant.setAttribute('position', currentPos)
+            newPlant.setAttribute('scale', '0.5 0.5 0.5') // Adjust based on your model size
+            newPlant.setAttribute('shadow', '')
+            this.el.sceneEl.appendChild(newPlant)
+
+            this.plantCount++
+
+            // 3. Calculate distance from last plant
+            let message = `Plant ${this.plantCount}/10 placed.`
+            if (this.lastPos) {
+              const d = Math.sqrt(
+                Math.pow(currentPos.x - this.lastPos.x, 2) +
+                Math.pow(currentPos.z - this.lastPos.z, 2)
+              )
+              message += `<br>Gap: ${d.toFixed(2)}m`
+              
+              // Draw a connecting line
+              const line = document.createElement('a-entity')
+              line.setAttribute('line', {
+                start: this.lastPos,
+                end: currentPos,
+                color: '#39FF14'
+              })
+              this.el.sceneEl.appendChild(line)
+            }
+
+            // Update UI
+            document.getElementById('status-text').innerHTML = message
+            this.lastPos = currentPos
+
+            if (this.plantCount === 10) {
+              document.getElementById('status-text').innerHTML = "Row Complete! (10/10)"
+            }
+          })
+        }
+      })
+    </script>
+  </head>
+
+  <body>
+    <div id="agribuddy-ui">
+      <div class="neon-box">
+        <h3 style="margin:0 0 10px 0;">AGRIBUDDY ROW</h3>
+        <div id="status-text">Tap ground to start row...</div>
+        <button class="btn-reset" onclick="location.reload()">NEW ROW</button>
+      </div>
+    </div>
+
+    <a-scene
+      agribuddy-row
+      landing-page
+      xrextras-loading
+      xrextras-runtime-error
+      renderer="colorManagement:true"
+      xrweb="allowedDevices: any">
+
+      <a-assets>
+        <a-asset-item id="treeModel" src="tree.glb"></a-asset-item>
+      </a-assets>
+
+      <a-camera
+        id="camera"
+        position="0 8 0"
+        raycaster="objects: .ground-target"
+        cursor="fuse: false; rayOrigin: mouse;">
+      </a-camera>
+
+      <a-light type="ambient" intensity="0.6"></a-light>
+      <a-light type="directional" position="1 4 2" intensity="0.8" shadow></a-light>
+
+      <a-box
+        id="ground"
+        class="ground-target"
+        scale="1000 2 1000"
+        position="0 -1 0"
+        material="shader: shadow; transparent: true; opacity: 0.4"
+        shadow>
+      </a-box>
+    </a-scene>
+  </body>
+</html>
