@@ -2,103 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>AgriBuddy 3D | Live Environment Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AgriBuddy 3D | Crop Row Simulator</title>
 
   <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; font-family: 'Courier New', Courier, monospace; background: #000; }
+    body { margin: 0; background-color: #111; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
     
-    #webcam-stream {
-      position: fixed;
-      right: 0; bottom: 0;
-      min-width: 100%; min-height: 100%;
-      width: auto; height: auto;
-      z-index: -2;
-      object-fit: cover;
-    }
-
     #agribuddy-dashboard {
       position: absolute; top: 20px; left: 20px; z-index: 1000;
     }
 
     .neon-card {
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(10, 15, 10, 0.9);
       border: 2px solid #39FF14;
       padding: 15px;
-      border-radius: 10px;
-      width: 270px;
+      border-radius: 8px;
+      width: 280px;
       box-shadow: 0 0 15px #39FF14;
       color: #39FF14;
     }
 
-    .instructions {
-      margin-top: 10px; font-size: 0.75em; color: #fff; border-top: 1px dashed #39FF14; padding-top: 8px; line-height: 1.4;
+    .pitch-mode {
+      margin-top: 10px; font-size: 0.75em; color: #888; border-top: 1px dashed #39FF14; padding-top: 8px;
     }
   </style>
 
   <script>
-    // Access the back camera on mobile 
-    window.addEventListener('DOMContentLoaded', () => {
-      const video = document.getElementById('webcam-stream');
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' } 
-        })
-        .then((stream) => {
-          video.srcObject = stream;
-          video.play();
-        })
-        .catch((err) => {
-          console.error("Camera initialization paused: ", err);
-        });
-      }
-    });
-
-    // Row-Spawning Logic 
     AFRAME.registerComponent('row-spawner', {
       init: function() {
         this.rowCount = 0;
         this.plantsPerRow = 10;
-        this.spacing = 0.30; // Clean 30cm agricultural spacing metric
+        this.spacing = 0.35; // 35 cm distance between wheat stalks
 
         this.el.addEventListener('click', (e) => {
+          // Get the exact click intersection point on the field ground
           const startPoint = e.detail.intersection.point;
           this.rowCount++;
 
-          // Spawn an organized row of 10 wheat entities extending outward
+          // Spawn a straight row of 10 wheat plants extending along the Z-axis
           for (let i = 0; i < this.plantsPerRow; i++) {
             const plantOffsetZ = startPoint.z - (i * this.spacing);
             const plantPosition = { x: startPoint.x, y: startPoint.y, z: plantOffsetZ };
 
             const wheatStalk = document.createElement('a-entity');
             
-            // Runs your custom asset. Falls back to a golden structural cylinder if asset hasn't downloaded
+            // Tries to load your Wheat.glb. If it fails, it automatically falls back to a gold cylinder marker
             wheatStalk.setAttribute('gltf-model', '#wheatAsset');
-            wheatStalk.setAttribute('geometry', 'primitive: cylinder; radius: 0.015; height: 0.25');
-            wheatStalk.setAttribute('material', 'color: #DAA520; metalness: 0.1; roughness: 0.5');
+            wheatStalk.setAttribute('geometry', 'primitive: cylinder; radius: 0.02; height: 0.25');
+            wheatStalk.setAttribute('material', 'color: #DAA520; roughness: 0.3'); 
             
             wheatStalk.setAttribute('position', plantPosition);
             this.el.sceneEl.appendChild(wheatStalk);
           }
 
-          // Generate target green guideline tracking row trajectory
+          // Draw a distinct row line path for visual planning validation
           const endPoint = { x: startPoint.x, y: startPoint.y, z: startPoint.z - ((this.plantsPerRow - 1) * this.spacing) };
           const rowLine = document.createElement('a-entity');
           rowLine.setAttribute('line', {
             start: startPoint,
             end: endPoint,
             color: '#39FF14',
-            opacity: 0.9
+            opacity: 0.8
           });
           this.el.sceneEl.appendChild(rowLine);
 
-          // Update Dashboard readouts live
+          // Update data metrics on screen dashboard
           document.getElementById('metrics').innerHTML = `
-            Rows Programmed: ${this.rowCount}<br>
-            Total Grid Yield: ${this.rowCount * this.plantsPerRow} Units<br>
-            Stalk Spacing: ${this.spacing}m
+            Rows Placed: ${this.rowCount}<br>
+            Total Yield Config: ${this.rowCount * this.plantsPerRow} Stalks<br>
+            Intra-Row Spacing: ${this.spacing}m (Fixed)
           `;
         });
       }
@@ -108,44 +82,42 @@
 
 <body>
 
-  <video id="webcam-stream" autoplay playsinline></video>
-
   <div id="agribuddy-dashboard">
     <div class="neon-card">
-      <div style="font-weight: bold; font-size: 1.05em; letter-spacing: 1px;">AGRIBUDDY FIELD AR</div>
+      <div style="font-weight: bold; font-size: 1.1em; letter-spacing: 1px;">AGRIBUDDY: SIMULATOR V1.0</div>
       <div id="metrics" style="margin-top: 10px; font-size: 0.85em; line-height: 1.5;">
-        Rows Programmed: 0<br>
-        Total Grid Yield: 0 Units<br>
-        Stalk Spacing: 0.30m
+        Rows Placed: 0<br>
+        Total Yield Config: 0 Stalks<br>
+        Intra-Row Spacing: 0.35m
       </div>
-      <div class="instructions">
-        <strong>Live Controls:</strong> Point your camera forward and tap the clear space overlay to generate a straight 10-stalk row matrix automatically.
+      <div class="pitch-mode">
+        <strong>Demo Controls:</strong> Click anywhere on the dark field surface to plan an entire structured crop row automatically.
       </div>
-      <button onclick="location.reload()" style="background: none; border: 1px solid #39FF14; color: #39FF14; width: 100%; margin-top: 10px; padding: 6px; cursor: pointer; border-radius: 4px; font-size: 0.75em; font-family: monospace;">CLEAR ALL ROWS</button>
+      <button onclick="location.reload()" style="background: none; border: 1px solid #39FF14; color: #39FF14; width: 100%; margin-top: 10px; padding: 5px; cursor: pointer; border-radius: 4px; font-size: 0.75em;">CLEAR FIELD</button>
     </div>
   </div>
 
-  <a-scene cursor="rayOrigin: mouse" raycaster="objects: .field-plane" renderer="alpha: true; colorManagement: true;">
+  <a-scene cursor="rayOrigin: mouse" raycaster="objects: .field-plane">
     
     <a-assets>
       <a-asset-item id="wheatAsset" src="Wheat.glb"></a-asset-item>
     </a-assets>
 
-    <a-camera position="0 1.5 2" rotation="-15 0 0" look-controls="enabled: false"></a-camera>
+    <a-camera position="0 3 4" rotation="-20 0 0"></a-camera>
 
     <a-entity
       class="field-plane"
-      geometry="primitive: plane; width: 100; height: 100"
+      geometry="primitive: plane; width: 50; height: 50"
       rotation="-90 0 0"
-      position="0 0 0"
-      material="transparent: true; opacity: 0"
+      material="color: #1b2416; roughness: 1"
+      gridhelper="size: 50; divisions: 50; colorCenterLine: #222; colorGrid: #2d3b25"
       row-spawner>
     </a-entity>
 
-    <a-light type="ambient" intensity="0.9"></a-light>
-    <a-light type="directional" position="1 3 1" intensity="0.4"></a-light>
+    <a-light type="ambient" intensity="0.7"></a-light>
+    <a-light type="directional" position="2 5 3" intensity="0.6"></a-light>
     
-  </a-scene>
+    <a-sky color="#050805"></a-scene>
 
 </body>
 </html>
